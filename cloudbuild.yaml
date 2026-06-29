@@ -1,0 +1,42 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/swing-ocr/swing-ocr:$COMMIT_SHA
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/swing-ocr/swing-ocr:latest
+      - .
+
+  # Push both tags to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - push
+      - us-central1-docker.pkg.dev/$PROJECT_ID/swing-ocr/swing-ocr:$COMMIT_SHA
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - push
+      - us-central1-docker.pkg.dev/$PROJECT_ID/swing-ocr/swing-ocr:latest
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - swing-ocr
+      - --image=us-central1-docker.pkg.dev/$PROJECT_ID/swing-ocr/swing-ocr:$COMMIT_SHA
+      - --region=us-central1
+      - --platform=managed
+      - --allow-unauthenticated
+      - --set-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest,GOOGLE_PLACES_API_KEY=GOOGLE_PLACES_API_KEY:latest
+      - --memory=512Mi
+      - --cpu=1
+      - --min-instances=0
+      - --max-instances=10
+
+images:
+  - us-central1-docker.pkg.dev/$PROJECT_ID/swing-ocr/swing-ocr:$COMMIT_SHA
+  - us-central1-docker.pkg.dev/$PROJECT_ID/swing-ocr/swing-ocr:latest
